@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sqlite3
 import functools
+from datetime import datetime
 
 # decorator to log SQL queries
 def log_queries(func):
@@ -10,6 +11,7 @@ def log_queries(func):
         query = kwargs.get("query")
         if query is None and args:
             query = args[0] if isinstance(args[0], str) else None
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[SQL] {query if query is not None else 'UNKNOWN QUERY'}")
         return func(*args, **kwargs)
     return wrapper
