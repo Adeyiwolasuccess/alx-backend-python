@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -6,12 +7,15 @@ from django.utils import timezone
 class User(AbstractUser):
     """
     Custom user:
-    - Uses Django's default auto-increment ID
-    - Email as unique login identifier (no username)
-    - Optional phone_number
-    - Role enum: guest | host | admin
+    - UUID primary key
+    - email as unique login identifier (no username)
+    - optional phone_number
+    - role enum: guest | host | admin
     - created_at timestamp
     """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
+
+    # Use email instead of username
     username = None
     email = models.EmailField(unique=True, db_index=True)
 
@@ -23,6 +27,7 @@ class User(AbstractUser):
         ADMIN = "admin", "Admin"
 
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.GUEST)
+
     created_at = models.DateTimeField(default=timezone.now, editable=False)
 
     USERNAME_FIELD = "email"
@@ -34,8 +39,9 @@ class User(AbstractUser):
 
 class Conversation(models.Model):
     """
-    Conversation with multiple participants.
+    Conversation with N participants.
     """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
 
     participants = models.ManyToManyField(
@@ -71,6 +77,7 @@ class Message(models.Model):
     """
     Message sent by a user within a conversation.
     """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
     message_body = models.TextField()
