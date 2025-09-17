@@ -1,23 +1,18 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Prefetch
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, filters  # <-- filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Conversation, ConversationParticipant, Message
-from .serializers import (
-    UserSerializer,
-    ConversationSerializer,
-    MessageSerializer,
-)
+from .serializers import ConversationSerializer, MessageSerializer
 
 User = get_user_model()
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
-    Lists conversations and allows creating a new conversation.
-    Also provides a custom action to send a message to an existing conversation.
+    List/create conversations and send messages to an existing conversation.
     """
     queryset = (
         Conversation.objects
@@ -30,15 +25,16 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    # DRF filters
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["participants__email", "participants__first_name", "participants__last_name"]
+    ordering_fields = ["created_at"]
+
     @action(detail=True, methods=["post"], url_path="send")
     def send(self, request, pk=None):
         """
         POST /api/conversations/{conversation_id}/send/
-        Payload:
-        {
-          "sender_id": "<UUID of user>",
-          "message_body": "text ..."
-        }
+        Body: {"sender_id": "<uuid>", "message_body": "Hello"}
         """
         conversation = self.get_object()
         payload = request.data.copy()
@@ -46,17 +42,21 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         serializer = MessageSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
-        serializer.save()  # validate() ensures sender is a participant
+        serializer.save()  # validate() ensures sender ∈ participants
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class MessageViewSet(viewsets.ModelViewSet):
     """
-    Lists messages (optionally filter by conversation) and allows creating messages.
-    - Filter by conversation: /api/messages/?conversation_id=<uuid>
+    List/create messages. Filter by conversation via ?conversation_id=<uuid>.
     """
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    # DRF filters
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["message_body", "sender__email", "sender__first_name", "sender__last_name"]
+    ordering_fields = ["sent_at"]
 
     def get_queryset(self):
         qs = Message.objects.select_related("sender", "conversation").order_by("sent_at")
