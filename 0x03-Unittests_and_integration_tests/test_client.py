@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Unit tests for client.GithubOrgClient.org using patch and
-parameterization without performing real HTTP calls.
-"""
+"""Unit tests for client.GithubOrgClient."""
 import unittest
 from typing import Any, Dict
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from parameterized import parameterized
 
 from client import GithubOrgClient
 
 
 class TestGithubOrgClient(unittest.TestCase):
-    """Tests for GithubOrgClient behaviors against the GitHub API."""
+    """Tests for GithubOrgClient behaviors."""
 
     @parameterized.expand([
         ("google",),
@@ -19,7 +17,7 @@ class TestGithubOrgClient(unittest.TestCase):
     ])
     @patch("client.get_json")
     def test_org(self, org: str, mock_get_json) -> None:
-        """It should call get_json once with the org URL and return payload."""
+        """Call get_json once with org URL and return payload."""
         payload: Dict[str, Any] = {"login": org, "id": 1}
         mock_get_json.return_value = payload
 
@@ -29,6 +27,18 @@ class TestGithubOrgClient(unittest.TestCase):
         expected_url = GithubOrgClient.ORG_URL.format(org=org)
         mock_get_json.assert_called_once_with(expected_url)
         self.assertEqual(result, payload)
+
+    def test_public_repos_url(self) -> None:
+        """Return repos_url derived from the mocked org property."""
+        repos_url = "https://api.github.com/orgs/test/repos"
+        payload: Dict[str, Any] = {"repos_url": repos_url}
+        with patch(
+            "client.GithubOrgClient.org",
+            new_callable=PropertyMock,
+            return_value=payload,
+        ):
+            client = GithubOrgClient("test")
+            self.assertEqual(client._public_repos_url, repos_url)
 
 
 if __name__ == "__main__":
