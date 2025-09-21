@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from .managers import UserManager
 
 class User(AbstractUser):
     """
@@ -39,6 +40,9 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.GUEST)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    objects = UserManager()
+    EMAIL_FIELD = "email"
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]  # prompted when creating a superuser
