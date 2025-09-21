@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Unit tests for utils.py covering nested map access, HTTP JSON fetch, and
-memoization behavior with caching. Tests are parameterized, patched where
-appropriate, and comply with pycodestyle 2.5 requirements.
+"""Unit tests for utils.py: nested map access, HTTP JSON fetch,
+and memoization behavior. Tests are parameterized and patched
+where appropriate, and comply with pycodestyle 2.5.
 """
 import unittest
-from typing import Any, Dict, Mapping, Sequence, Tuple
+from typing import Any, Dict, Mapping, Sequence
 from parameterized import parameterized
 from unittest.mock import patch, Mock
 
@@ -12,7 +12,7 @@ from utils import access_nested_map, get_json, memoize
 
 
 class TestAccessNestedMap(unittest.TestCase):
-    """Tests for access_nested_map to validate correct traversal and errors."""
+    """Validate traversal and error behavior for access_nested_map."""
 
     @parameterized.expand([
         ({"a": 1}, ("a",), 1),
@@ -23,9 +23,9 @@ class TestAccessNestedMap(unittest.TestCase):
         self,
         nested_map: Mapping[str, Any],
         path: Sequence[str],
-        expected: Any
+        expected: Any,
     ) -> None:
-        """It should return the expected value along the provided key path."""
+        """Return the expected value along the provided key path."""
         self.assertEqual(access_nested_map(nested_map, path), expected)
 
     @parameterized.expand([
@@ -36,23 +36,27 @@ class TestAccessNestedMap(unittest.TestCase):
         self,
         nested_map: Mapping[str, Any],
         path: Sequence[str],
-        expected_msg: str
+        expected_msg: str,
     ) -> None:
-        """It should raise KeyError with the missing key as the message."""
+        """Raise KeyError with the missing key as the message."""
         with self.assertRaises(KeyError) as cm:
             access_nested_map(nested_map, path)
         self.assertEqual(str(cm.exception), expected_msg)
 
 
 class TestGetJson(unittest.TestCase):
-    """Tests for get_json ensuring HTTP is mocked and payloads are returned."""
+    """Ensure get_json returns payload and does one HTTP call."""
 
     @parameterized.expand([
         ("http://example.com", {"payload": True}),
         ("http://holberton.io", {"payload": False}),
     ])
-    def test_get_json(self, test_url: str, test_payload: Dict[str, Any]) -> None:
-        """It should return the JSON payload and call requests.get exactly once."""
+    def test_get_json(
+        self,
+        test_url: str,
+        test_payload: Dict[str, Any],
+    ) -> None:
+        """Return the payload and call requests.get exactly once."""
         with patch("utils.requests.get") as mock_get:
             mock_resp = Mock()
             mock_resp.json.return_value = test_payload
@@ -65,27 +69,31 @@ class TestGetJson(unittest.TestCase):
 
 
 class TestMemoize(unittest.TestCase):
-    """Tests for memoize to assert that cached values avoid repeated calls."""
+    """Verify memoize caches values to avoid repeated calls."""
 
     def test_memoize(self) -> None:
-        """It should call the underlying method once and cache the result."""
+        """Call the underlying method once and cache the result."""
         class TestClass:
-            """Helper class exposing a memoized property for testing."""
+            """Expose a memoized property for testing."""
 
             def a_method(self) -> int:
-                """Return a sentinel integer used to test memoization."""
+                """Return a sentinel integer to test memoization."""
                 return 42
 
             @memoize
             def a_property(self) -> int:
-                """Return the result of a_method but cache after first call."""
+                """Return self.a_method() and cache after the first call."""
                 return self.a_method()
 
-        with patch.object(TestClass, "a_method", return_value=42) as mock_method:
+        with patch.object(
+            TestClass, "a_method", return_value=42
+        ) as mock_method:
             obj = TestClass()
-            self.assertEqual(obj.a_property, 42)   # computes & caches
-            self.assertEqual(obj.a_property, 42)   # returns cached value
-            mock_method.assert_called_once()       # called only once
+            # First access computes and caches the value.
+            self.assertEqual(obj.a_property, 42)
+            # Second access returns the cached value.
+            self.assertEqual(obj.a_property, 42)
+            mock_method.assert_called_once()
 
 
 if __name__ == "__main__":
