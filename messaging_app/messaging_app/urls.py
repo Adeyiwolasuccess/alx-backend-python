@@ -17,8 +17,19 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,  
+    TokenRefreshView,
+    TokenBlacklistView,   
+)
 
 urlpatterns = [
+    # JWT auth endpoints
+    path("auth/jwt/login", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/jwt/refresh", TokenRefreshView.as_view(), name="token_refresh"),
+    path("auth/jwt/logout", TokenBlacklistView.as_view(), name="token_blacklist"),
+
+    
     path("admin/", admin.site.urls),
     path("api/", include("chats.urls")),
     path("api-auth/", include("rest_framework.urls")),  # adds login/logout in browsable API
