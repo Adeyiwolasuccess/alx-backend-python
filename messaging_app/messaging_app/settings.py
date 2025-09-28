@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'django_filters'
     'chats',
 ]
 
@@ -63,6 +64,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+
+    # Pagination: 20 messages per page (global)
+    'DEFAULT_PAGINATION_CLASS': 'chats.pagination.Defaultpagination',
+    'PAGE_SIZE': 20,
+
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
 
 ROOT_URLCONF = 'messaging_app.urls'
