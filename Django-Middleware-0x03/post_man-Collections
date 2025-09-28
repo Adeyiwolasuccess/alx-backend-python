@@ -1,0 +1,47 @@
+Auth (JWT)
+POST /api/token/               # { "email": "...", "password": "..." } -> {access, refresh}
+POST /api/token/refresh/       # { "refresh": "..." } -> {access}
+POST /api/token/verify/        # { "token": "..." }
+
+Browsable API (Session Auth)
+GET  /api-auth/login/
+GET  /api-auth/logout/
+
+Conversations
+GET    /api/conversations/                              # list (search=, ordering=created_at)
+POST   /api/conversations/                              # { "participant_ids": ["<user_uuid>", ...] }
+GET    /api/conversations/{conversation_id}/            # retrieve
+PUT    /api/conversations/{conversation_id}/            # update participants
+PATCH  /api/conversations/{conversation_id}/            # update participants
+DELETE /api/conversations/{conversation_id}/            # delete
+
+Send Message (custom action on conversation)
+POST   /api/conversations/{conversation_id}/send/       # { "sender_id": "<user_uuid>", "message_body": "..." }
+
+Nested Messages (via NestedDefaultRouter)
+GET    /api/conversations/{conversation_id}/messages/   # list convo messages
+POST   /api/conversations/{conversation_id}/messages/   # create message in convo
+
+Messages (direct)
+GET    /api/messages/                                   # list (supports filters + pagination)
+POST   /api/messages/                                   # { "conversation_id": "<uuid>", "sender_id": "<uuid>", "message_body": "..." }
+GET    /api/messages/{message_id}/                      # retrieve
+PUT    /api/messages/{message_id}/                      # update
+PATCH  /api/messages/{message_id}/                      # partial update
+DELETE /api/messages/{message_id}/                      # delete
+
+Query Params — Filters (MessageFilter)
+conversation_id=<uuid>      # by conversation
+sender_id=<uuid>            # by sender (User.user_id)
+participant_id=<uuid>       # messages where conversation has this participant
+sent_after=YYYY-MM-DDTHH:MM:SSZ
+sent_before=YYYY-MM-DDTHH:MM:SSZ
+
+Search & Ordering
+search=<text>               # body or sender fields
+ordering=sent_at            # messages
+ordering=created_at         # conversations
+
+Pagination (PageNumberPagination)
+page=<n>                    # e.g., ?page=1
+page_size=<m>               # optional; default 20 (max 100)
