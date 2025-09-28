@@ -66,7 +66,7 @@ REST_FRAMEWORK = {
     ),
 
     # Pagination: 20 messages per page (global)
-    'DEFAULT_PAGINATION_CLASS': 'chats.pagination.Defaultpagination',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 
     'DEFAULT_FILTER_BACKENDS': [
