@@ -29,6 +29,6 @@ _mw = "chats.middleware.RestrictAccessByTimeMiddleware"
 if _mw not in MIDDLEWARE:
     MIDDLEWARE.append(_mw)
 
-_mw = "chats.middleware.RestrictAccessByTimeMiddleware"
+_mw = "chats.middleware.OffensiveLanguageMiddleware"
 if _mw not in MIDDLEWARE:
     MIDDLEWARE.append(_mw)
