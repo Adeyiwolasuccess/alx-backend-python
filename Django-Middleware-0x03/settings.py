@@ -32,3 +32,7 @@ if _mw not in MIDDLEWARE:
 _mw = "chats.middleware.OffensiveLanguageMiddleware"
 if _mw not in MIDDLEWARE:
     MIDDLEWARE.append(_mw)
+
+_mw = "chats.middleware.RolepermissionMiddleware"
+if _mw not in MIDDLEWARE:
+    MIDDLEWARE.append(_mw)

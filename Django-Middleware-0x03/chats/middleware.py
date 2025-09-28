@@ -140,3 +140,32 @@ class OffensiveLanguageMiddleware:
                 dq.append(now)
 
         return self.get_response(request)
+    
+class RolepermissionMiddleware:
+    """
+    Allow only admins (and moderators, if that role exists) to perform
+    modification actions on messaging resources.
+
+    We scope this to the messaging API and to *unsafe* methods:
+      - PUT, PATCH, DELETE on /api/messages* or /api/conversations*
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self._protected_prefixes = ("/api/messages", "/api/conversations")
+        self._protected_methods = ("PUT", "PATCH", "DELETE")
+
+    def __call__(self, request):
+        path = request.path or ""
+        method = (request.method or "").upper()
+
+        should_check = path.startswith(self._protected_prefixes) and method in self._protected_methods
+        if should_check:
+            user = getattr(request, "user", None)
+            role = getattr(user, "role", None)
+            is_authed = bool(user and getattr(user, "is_authenticated", False))
+            is_allowed_role = role in ("admin", "moderator")  # 'moderator' optional, see note below
+
+            if not (is_authed and is_allowed_role):
+                return HttpResponseForbidden("Only admin or moderator may modify or delete messaging resources.")
+
+        return self.get_response(request)
