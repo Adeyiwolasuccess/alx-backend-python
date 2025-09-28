@@ -28,3 +28,7 @@ except NameError:
 _mw = "chats.middleware.RestrictAccessByTimeMiddleware"
 if _mw not in MIDDLEWARE:
     MIDDLEWARE.append(_mw)
+
+_mw = "chats.middleware.RestrictAccessByTimeMiddleware"
+if _mw not in MIDDLEWARE:
+    MIDDLEWARE.append(_mw)

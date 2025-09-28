@@ -2,7 +2,11 @@ import os
 from datetime import datetime
 from datetime import time as dt_time 
 from django.utils import timezone
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
+from collections import deque
+import threading
+from datetime import timedelta
+
 from django.conf import settings
 
 class RequestLoggingMiddleware:
@@ -70,3 +74,69 @@ class RestrictAccessByTimeMiddleware:
         return self.get_response(request)
     
         
+class OffensiveLanguageMiddleware:
+    """
+    (Rate limiting by IP; “offensive language” task text, but requirement is per-IP throttling.)
+    Blocks sending more than LIMIT messages within WINDOW seconds per client IP.
+
+    Counted as a "message send" when:
+      - POST to any path that ends with "/send/"  (e.g., /api/conversations/<id>/send/)
+      - POST to any path that contains "/messages" (e.g., /api/messages/ or /api/conversations/<id>/messages/)
+    """
+
+    LIMIT = 5
+    WINDOW_SECONDS = 60
+
+    # in-process store: { ip: deque[timestamps] }
+    _store = {}
+    _lock = threading.Lock()
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def _get_client_ip(self, request) -> str:
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            # take first address in X-Forwarded-For
+            return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR", "0.0.0.0")
+
+    def __call__(self, request):
+        path = request.path or ""
+        method = (request.method or "").upper()
+
+        # Only count message POSTs
+        is_message_post = (
+            method == "POST"
+            and path.startswith("/api/")
+            and (path.endswith("/send/") or "/messages" in path)
+        )
+
+        if is_message_post:
+            ip = self._get_client_ip(request)
+            now = timezone.now().timestamp()
+            cutoff = now - self.WINDOW_SECONDS
+
+            with self._lock:
+                dq = self._store.get(ip)
+                if dq is None:
+                    dq = deque()
+                    self._store[ip] = dq
+
+                # prune old timestamps
+                while dq and dq[0] < cutoff:
+                    dq.popleft()
+
+                if len(dq) >= self.LIMIT:
+                    # 429 Too Many Requests (use 403 if your checker requires it)
+                    retry_after = int(self.WINDOW_SECONDS)
+                    resp = HttpResponse(
+                        f"Rate limit exceeded: max {self.LIMIT} messages per {self.WINDOW_SECONDS}s per IP.",
+                        status=429,
+                    )
+                    resp["Retry-After"] = str(retry_after)
+                    return resp
+
+                dq.append(now)
+
+        return self.get_response(request)
