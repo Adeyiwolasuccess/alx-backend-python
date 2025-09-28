@@ -24,3 +24,7 @@ except NameError:
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         _mw,  # chats.middleware.RequestLoggingMiddleware
     ]
+
+_mw = "chats.middleware.RestrictAccessByTimeMiddleware"
+if _mw not in MIDDLEWARE:
+    MIDDLEWARE.append(_mw)
