@@ -14,7 +14,7 @@ def create_notification_on_new_message(sender, instance: Message, created: bool,
         return
 
     # Avoid duplicates thanks to unique_together; get_or_create is extra safe
-    Notification.objects.get_or_create(
+    Notification.objects.create(
         user=instance.receiver,
         message=instance,
         defaults={"is_read": False},
