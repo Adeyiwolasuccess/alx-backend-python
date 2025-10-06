@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Message, Notification
+from .models import Message, Notification, MessageHistory
 
 
 @admin.register(Message)
@@ -18,3 +18,17 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "message", "is_read", "created_at")
     list_filter = ("is_read", "created_at", "user")
     search_fields = ("message__content", "user__email", "user__username")
+
+class MessageHistoryInline(admin.TabularInline):
+    model = MessageHistory
+    fields = ("old_content", "edited_at", "edited_by")
+    readonly_fields = ("old_content", "edited_at", "edited_by")
+    extra = 0
+    can_delete = False
+
+
+@admin.register(MessageHistory)
+class MessageHistoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "message", "edited_by", "edited_at")
+    readonly_fields = ("old_content", "edited_at", "edited_by")
+    search_fields = ("old_content", "message__id")

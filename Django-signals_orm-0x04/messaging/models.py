@@ -47,6 +47,7 @@ class Notification(models.Model):
     )
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    edited = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -57,3 +58,36 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification {self.pk} → {self.user} (msg={self.message_id})"
+
+class MessageHistory(models.Model):
+    """
+    Stores previous versions of Message.content before edits.
+    Each time a Message is updated and content changes, a MessageHistory row is created
+    with the old content and timestamp when it was replaced.
+    """
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="history"
+    )
+    old_content = models.TextField()
+    edited_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="message_edits",
+    )
+
+
+    class Meta:
+        ordering = ["-edited_at"]
+        indexes = [
+            models.Index(fields=["message", "edited_at"]),
+            models.Index(fields=["edited_by", "edited_at"]),
+        ]
+
+    def __str__(self):
+        return f"History for Msg {self.message_id} at {self.edited_at.isoformat()}"

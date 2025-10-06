@@ -2,7 +2,9 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
-from .models import Message, Notification
+from .models import Message, Notification, MessageHistory
+
+User = get_user_model()
 
 
 class NotificationSignalTests(TestCase):
@@ -32,3 +34,28 @@ class NotificationSignalTests(TestCase):
         self.assertEqual(Notification.objects.filter(user=self.bob, message=msg).count(), 1)
         with self.assertRaises(IntegrityError):
             Notification.objects.create(user=self.bob, message=msg)  # violates unique_together
+
+class MessageEditHistoryTests(TestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user(username="alice", email="alice@example.com", password="pass123")
+        self.bob = User.objects.create_user(username="bob", email="bob@example.com", password="pass123")
+
+    def test_message_edit_creates_history(self):
+        msg = Message.objects.create(sender=self.alice, receiver=self.bob, content="Original")
+        self.assertFalse(msg.edited)
+        self.assertEqual(MessageHistory.objects.count(), 0)
+
+        # update content
+        msg.content = "Edited content"
+        msg.save()
+
+        # message should be marked edited
+        msg.refresh_from_db()
+        self.assertTrue(msg.edited)
+
+        # history created
+        histories = MessageHistory.objects.filter(message=msg)
+        self.assertEqual(histories.count(), 1)
+        hist = histories.first()
+        self.assertEqual(hist.old_content, "Original")
+        self.assertIsNotNone(hist.edited_at)
