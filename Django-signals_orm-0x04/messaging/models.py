@@ -2,6 +2,29 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+class MessageQuerySet(models.QuerySet):
+    def for_conversation_optimized(self, conversation_id):
+        """
+        Returns all messages for a conversation optimized for threading:
+        - select_related for single-valued relations (sender, receiver, parent_message)
+        - only() to fetch necessary fields for building the thread
+        """
+        return (
+            self.filter(conversation_id=conversation_id)
+            .select_related("sender", "receiver", "parent_message")
+            .only(
+                "id",
+                "sender_id",
+                "receiver_id",
+                "content",
+                "timestamp",
+                "parent_message_id",
+                "read",
+                "edited",
+            )
+            .order_by("timestamp")  # oldest-first helps building thread
+        )
+
 
 class Message(models.Model):
     """
@@ -17,19 +40,37 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name="received_messages",
     )
+
+     # NEW: self-referential FK for replies
+    parent_message = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="replies",
+        help_text="If set, this message is a reply to another message in the same conversation.",
+    )
+
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
 
+     # optional fields from previous tasks
+    read = models.BooleanField(default=False, db_index=True)
+    edited = models.BooleanField(default=False, db_index=True)
+
+    # Queryset / manager
+    objects = MessageQuerySet.as_manager()
+
     class Meta:
-        ordering = ["-timestamp"]
+        ordering = ["timestamp"]
         indexes = [
             models.Index(fields=["receiver", "timestamp"]),
             models.Index(fields=["sender", "timestamp"]),
+            models.Index(fields=["parent_message", "timestamp"]),
         ]
 
     def __str__(self):
         return f"Msg {self.pk} from {self.sender} to {self.receiver}"
-
 
 class Notification(models.Model):
     """
