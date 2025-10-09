@@ -59,3 +59,16 @@ class MessageEditHistoryTests(TestCase):
         hist = histories.first()
         self.assertEqual(hist.old_content, "Original")
         self.assertIsNotNone(hist.edited_at)
+
+
+class UnreadManagerTest(TestCase):
+    def setUp(self):
+        self.a = User.objects.create_user(username="a", email="a@example.com", password="pass123")
+        self.b = User.objects.create_user(username="b", email="b@example.com", password="pass123")
+
+    def test_unread_manager_returns_only_unread(self):
+        Message.objects.create(sender=self.a, receiver=self.b, content="one", read=False)
+        Message.objects.create(sender=self.a, receiver=self.b, content="two", read=True)
+        qs = Message.unread.for_user(self.b)
+        self.assertEqual(qs.count(), 1)
+        self.assertEqual(qs.first().content, "one")

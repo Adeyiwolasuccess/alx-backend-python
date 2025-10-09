@@ -26,6 +26,33 @@ class MessageQuerySet(models.QuerySet):
         )
 
 
+class UnreadMessagesManager(models.Manager):
+    """
+    Custom manager for retrieving unread messages for a given user.
+    Usage:
+        Message.unread.for_user(user)
+    """
+    def get_queryset(self):
+        return super().get_queryset()
+
+    def for_user(self, user):
+        """
+        Return a queryset of unread messages for `user` (where user is the receiver).
+        Optimized with .only(...) to fetch minimal fields needed for an inbox listing.
+        """
+        if user is None:
+            return self.none()
+
+        # adjust fields in .only() to what the UI needs (keeps query light)
+        return (
+            self.get_queryset()
+            .filter(receiver=user, read=False)
+            .only("id", "sender_id", "content", "timestamp")
+            .select_related("sender")  # if you need sender fields, this avoids another query
+            .order_by("-timestamp")
+        )
+
+
 class Message(models.Model):
     """
     A direct message from one user to another.
@@ -59,18 +86,17 @@ class Message(models.Model):
     edited = models.BooleanField(default=False, db_index=True)
 
     # Queryset / manager
-    objects = MessageQuerySet.as_manager()
+    unread = UnreadMessagesManager()
 
     class Meta:
-        ordering = ["timestamp"]
+        ordering = ["-timestamp"]
         indexes = [
+            models.Index(fields=["receiver", "read"]),
             models.Index(fields=["receiver", "timestamp"]),
-            models.Index(fields=["sender", "timestamp"]),
-            models.Index(fields=["parent_message", "timestamp"]),
         ]
 
     def __str__(self):
-        return f"Msg {self.pk} from {self.sender} to {self.receiver}"
+        return f"Message {self.pk} from {self.sender} to {self.receiver}"
 
 class Notification(models.Model):
     """

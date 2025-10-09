@@ -15,7 +15,29 @@ try:
 except ImportError:
     Conversation = None
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def unread_inbox(request):
+    """
+    GET /api/unread-inbox/
+    Returns lightweight list of unread messages for the authenticated user.
+    """
+    user = request.user
+    qs = Message.unread.for_user(user)  # uses .only(...) internally
 
+    results = []
+    for m in qs:
+        results.append({
+            "id": m.id,
+            "sender_id": m.sender_id,
+            "sender_email": getattr(m.sender, "email", None),  # available due to select_related
+            "content": m.content,
+            "timestamp": m.timestamp.isoformat(),
+        })
+
+    return Response({"count": len(results), "results": results})
+
+    
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_message(request):
